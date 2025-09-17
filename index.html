@@ -164,35 +164,24 @@
             }
             
             try {
-                // oEmbed APIから埋め込みコードを取得
-                const response = await fetch(`https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(url)}`);
-                const data = await response.json();
+                // モバイル対応のSoundCloudプレイヤーURLを直接生成
+                // "m.soundcloud.com"を"souncloud.com"に置換してAppダイレクトリンクを回避
+                const cleanUrl = url.replace('m.soundcloud.com', 'soundcloud.com');
                 
-                if (data.html) {
-                    // プレイヤーを表示
-                    container.innerHTML = data.html;
-                    
-                    // URLパラメータを更新
-                    const newUrl = new URL(window.location);
-                    newUrl.searchParams.set('url', url);
-                    window.history.pushState({}, '', newUrl);
-                    
-                } else {
-                    // 代替方法：直接iframeを生成
-                    const iframeUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`;
-                    container.innerHTML = `<iframe src="${iframeUrl}"></iframe>`;
-                }
-            } catch (error) {
-                console.error('Error loading SoundCloud player:', error);
+                // カスタムプレイヤーURLの生成
+                const iframeUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(cleanUrl)}&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`;
                 
-                // oEmbedが失敗した場合のフォールバック
-                const iframeUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`;
+                // プレイヤーを表示
                 container.innerHTML = `<iframe src="${iframeUrl}"></iframe>`;
                 
                 // URLパラメータを更新
                 const newUrl = new URL(window.location);
-                newUrl.searchParams.set('url', url);
+                newUrl.searchParams.set('url', cleanUrl);
                 window.history.pushState({}, '', newUrl);
+                
+            } catch (error) {
+                console.error('Error loading SoundCloud player:', error);
+                showError('プレイヤーの読み込みに失敗しました');
             }
         }
 
@@ -204,6 +193,21 @@
         // Enterキーで読み込み実行
         document.getElementById('soundcloudUrl').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
+                loadPlayer();
+            }
+        });
+
+        // URLパラメータでロードされた時はプレイヤーのみ表示
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const soundcloudUrl = urlParams.get('url');
+            
+            if (soundcloudUrl) {
+                // 入力フォームと説明文を非表示にする
+                document.querySelector('.input-section').style.display = 'none';
+                
+                // プレイヤーを直接表示
+                document.getElementById('soundcloudUrl').value = soundcloudUrl;
                 loadPlayer();
             }
         });
