@@ -2,786 +2,449 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#ff7700">
-    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SoundCloud Player</title>
     <style>
-        /* 共通スタイル */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        /* 基本スタイル */
+        * {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            overflow-x: hidden;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
-        
-        /* 通常モード（URLパラメータなし）のスタイル */
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            overflow: hidden;
-            display: none; /* デフォルトで非表示 */
-        }
-        
-        .header {
-            background: #ff7700;
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .input-section {
-            padding: 30px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        
-        input[type="url"] {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            min-width: 250px;
-        }
-        
-        button {
-            padding: 12px 24px;
-            background: #ff7700;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        
-        button:hover {
-            background: #ff5500;
-        }
-        
-        .player-section {
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .player-container {
-            margin: 20px 0;
-        }
-        
-        .error {
-            color: #e74c3c;
-            background: #ffeaea;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-        
-        .error-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 30px;
-            text-align: center;
-            color: #fff;
-        }
-        
-        .error-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
-        
-        .error-message h3 {
-            margin: 0 0 10px 0;
-            color: #ff7700;
-        }
-        
-        .error-message p {
-            margin: 0 0 15px 0;
-            color: rgba(255, 255, 255, 0.8);
-        }
-        
-        /* PWA インストールボタン */
-        .install-button {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            margin-top: 10px;
-            transition: all 0.3s ease;
-        }
-        
-        .install-button:hover {
-            background: rgba(255, 255, 255, 0.3);
-            border-color: rgba(255, 255, 255, 0.5);
-        }
-        
-        .info {
-            background: #e3f2fd;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            text-align: left;
-        }
-        
-        .url-example {
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            font-family: monospace;
-            word-break: break-all;
-        }
-        
-        /* ミニマルプレイヤーモードのスタイル（URLパラメータあり） */
-        .minimal-player {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #000;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* プレイヤーコンテナ */
+        .player {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* アートワーク */
+        .artwork {
+            width: 100%;
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #333 0%, #555 100%);
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
             position: relative;
         }
-        
-        .minimal-player iframe {
+
+        .artwork img {
             width: 100%;
-            height: 166px;
-            border: none;
-            box-shadow: none;
-            max-width: 600px;
-            margin: 0 auto;
+            height: 100%;
+            object-fit: cover;
         }
-        
-        .player-info {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            color: rgba(255,255,255,0.7);
+
+        .artwork-placeholder {
+            font-size: 60px;
+            opacity: 0.5;
+        }
+
+        /* トラック情報 */
+        .track-info {
+            margin-bottom: 30px;
+        }
+
+        .track-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .track-artist {
+            font-size: 16px;
+            opacity: 0.7;
+        }
+
+        /* プログレスバー */
+        .progress {
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #ff7700;
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .time {
+            display: flex;
+            justify-content: space-between;
             font-size: 12px;
-            text-decoration: none;
+            opacity: 0.7;
+            margin-top: 5px;
         }
-        
-        /* モバイル最適化 */
-        @media (max-width: 600px) {
-            .input-group {
-                flex-direction: column;
-            }
-            input[type="url"], button {
-                width: 100%;
-            }
-            .input-section, .player-section {
-                padding: 20px;
-            }
-            .minimal-player iframe {
-                width: 100%;
-                height: 180px; /* モバイルでの最適な高さ */
-            }
-            
-            /* モバイル最適化の強化 */
-            .minimal-player {
-                background: #000;
-                padding: 0;
-                margin: 0;
-            }
-            
-            /* タッチ操作の最適化 */
-            button {
-                min-height: 44px; /* タッチターゲットの最小サイズ */
-            }
+
+        /* コントロール */
+        .controls {
+            margin-top: 30px;
         }
-        
-        /* ローディングアニメーション */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
+
+        .play-btn {
+            background: #ff7700;
+            color: white;
+            border: none;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
+            font-size: 24px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease;
         }
-        
+
+        .play-btn:hover {
+            background: #ff5500;
+        }
+
+        .play-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* ローディング */
+        .loading {
+            font-size: 40px;
+            animation: spin 1s linear infinite;
+        }
+
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        /* エラー */
+        .error {
+            color: #ff7700;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .error button {
+            background: #ff7700;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        /* モバイル最適化 */
+        @media (max-width: 480px) {
+            .player {
+                padding: 15px;
+            }
+
+            .track-title {
+                font-size: 18px;
+            }
+
+            .track-artist {
+                font-size: 14px;
+            }
+
+            .play-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+        }
+
+        /* ランドスケープ */
+        @media (orientation: landscape) and (max-height: 600px) {
+            body {
+                padding: 20px;
+            }
+
+            .player {
+                max-width: 600px;
+                display: flex;
+                gap: 30px;
+                align-items: center;
+            }
+
+            .artwork {
+                width: 200px;
+                height: 200px;
+                margin-bottom: 0;
+            }
+
+            .info {
+                flex: 1;
+                text-align: left;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- 通常モードのコンテナ -->
-    <div class="container">
-        <div class="header">
-            <h1>🎵 SoundCloud Player</h1>
-            <p>URLパラメータで楽曲を再生できるプレイヤー</p>
+    <div class="player">
+        <!-- アートワーク -->
+        <div class="artwork" id="artwork">
+            <div class="artwork-placeholder">🎵</div>
         </div>
-        
-        <div class="input-section">
-            <div class="input-group">
-                <input type="url" id="soundcloudUrl" placeholder="SoundCloud URLを入力 (例: https://soundcloud.com/artist/track)">
-                <button onclick="loadPlayer()" id="loadButton">読み込み</button>
+
+        <!-- 情報 -->
+        <div class="info">
+            <div class="track-info">
+                <div class="track-title" id="trackTitle">読み込み中...</div>
+                <div class="track-artist" id="trackArtist"></div>
             </div>
-            
-            <div class="info">
-                <h3>🔗 URLパラメータでのアクセス方法</h3>
-                <p>以下の形式でURLにアクセスすると、指定した楽曲が自動的に表示されます：</p>
-                <div class="url-example">
-                    https://[ユーザー名].github.io/soundcloud-player/?url=https://soundcloud.com/artist/track-name
+
+            <!-- プログレス -->
+            <div class="progress">
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="time">
+                    <span id="currentTime">0:00</span>
+                    <span id="duration">0:00</span>
                 </div>
             </div>
-        </div>
-        
-        <div class="player-section">
-            <div id="playerContainer" class="player-container">
-                <p>上記にSoundCloud URLを入力するか、URLパラメータで指定してください</p>
+
+            <!-- コントロール -->
+            <div class="controls">
+                <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+            </div>
+
+            <!-- エラー -->
+            <div class="error" id="error" style="display: none;">
+                <div id="errorMessage"></div>
+                <button onclick="retry()">再試行</button>
             </div>
         </div>
     </div>
-    
-    <!-- ミニマルプレイヤーモード -->
-    <div class="minimal-player" id="minimalPlayer" style="display: none;">
-        <a href="#" onclick="showNormalMode()" class="player-info">×</a>
-        <div id="minimalPlayerContainer"></div>
-    </div>
 
-    <!-- SoundCloud Widget API -->
-    <script src="https://w.soundcloud.com/player/api.js" async></script>
+    <!-- SoundCloud SDK -->
+    <script src="https://connect.soundcloud.com/sdk/sdk-3.3.2.js"></script>
     
     <script>
-        let isMinimalMode = false;
-        let currentWidget = null;
-        let widgetApiLoaded = false;
-        
-        // SoundCloud Widget APIの読み込み状態をチェック
-        function checkWidgetApiStatus() {
-            setTimeout(() => {
-                if (window.SC && window.SC.Widget) {
-                    widgetApiLoaded = true;
-                    console.log('SoundCloud Widget API loaded successfully');
-                } else {
-                    widgetApiLoaded = false;
-                    console.log('SoundCloud Widget API not available (this is normal in development)');
-                }
-            }, 2000); // APIの読み込みを待つ
-        }
-        
-        // ページ読み込み時にWidget API状態をチェック
-        checkWidgetApiStatus();
-        
-        // 公式パラメータのみでSoundCloud iframe URLを構築
-        function buildSoundCloudIframeUrl(soundcloudUrl) {
-            const baseUrl = 'https://w.soundcloud.com/player/';
-            const params = new URLSearchParams();
-            
-            // 公式パラメータのみを使用
-            params.append('url', soundcloudUrl);
-            params.append('auto_play', 'false');  // 自動再生オフ（ブラウザポリシー対応）
-            params.append('buying', 'false');     // 購入ボタン非表示
-            params.append('sharing', 'false');    // 共有ボタン非表示
-            params.append('download', 'false');   // ダウンロードボタン非表示
-            params.append('show_artwork', 'true'); // アートワーク表示
-            params.append('show_playcount', 'false'); // 再生数非表示
-            params.append('show_user', 'true');   // ユーザー名表示
-            params.append('single_active', 'true'); // 複数プレイヤー時の干渉防止
-            
-            // カスタムカラー（オレンジ）
-            params.append('color', '%23ff7700');
-            
-            return baseUrl + '?' + params.toString();
-        }
-        
-        // iframe読み込み状態の監視（簡略化版）
-        function monitorIframeLoading(iframe, container, timeoutMs = 5000) {
-            let hasLoaded = false;
-            
-            // iframe読み込み完了時
-            iframe.onload = function() {
-                if (!hasLoaded) {
-                    hasLoaded = true;
-                    console.log('iframe loaded successfully');
-                    
-                    // SoundCloud Widget APIの初期化を試行
-                    setTimeout(() => {
-                        currentWidget = initializeWidget(iframe);
-                        
-                        // さらに2秒後に、コンテンツがブロックされているかチェック
-                        setTimeout(() => {
-                            checkIframeContent(iframe, container);
-                        }, 2000);
-                    }, 500);
-                }
-            };
-            
-            // iframe読み込み失敗時
-            iframe.onerror = function() {
-                if (!hasLoaded) {
-                    hasLoaded = true;
-                    console.error('iframe failed to load');
-                    showIframeError(container, '読み込みに失敗しました');
-                }
-            };
-            
-            // タイムアウトチェック
-            setTimeout(() => {
-                if (!hasLoaded) {
-                    console.warn('iframe loading timeout');
-                    showIframeError(container, '読み込みがタイムアウトしました');
-                }
-            }, timeoutMs);
-        }
-        
-        // iframe内容のチェック（ブロックされていないか確認）
-        function checkIframeContent(iframe, container) {
-            try {
-                // iframeの内容にアクセスを試行
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                if (iframeDoc) {
-                    const bodyText = iframeDoc.body ? iframeDoc.body.textContent : '';
-                    // より具体的なブロックメッセージをチェック
-                    if (bodyText.includes('blocked by Chrome') || 
-                        bodyText.includes('This page has been blocked') ||
-                        bodyText.includes('ERR_BLOCKED_BY_CLIENT')) {
-                        console.warn('iframe content appears to be blocked by browser');
-                        // ブロックされている場合は、より具体的なメッセージを表示
-                        showBrowserBlockedMessage(container);
-                        return;
-                    }
-                }
-            } catch (e) {
-                // クロスオリジンエラーは正常（SoundCloudは外部ドメイン）
-                if (e.name === 'SecurityError') {
-                    console.log('Cross-origin iframe (normal for SoundCloud)');
-                    // セキュリティエラーは正常なので、エラーメッセージは表示しない
-                    return;
-                } else {
-                    console.warn('Could not check iframe content:', e);
-                }
-            }
-            
-            // Widget APIが利用できない場合の処理
-            if (!window.SC || !window.SC.Widget) {
-                console.log('SoundCloud Widget API is not available, but iframe content may still work');
-                // Widget APIがなくてもコンテンツが動作する可能性があるため、エラーは表示しない
-            }
-        }
-        
-        // ブラウザによるブロックメッセージの表示
-        function showBrowserBlockedMessage(container) {
-            container.innerHTML = `
-                <div class="error-container">
-                    <div class="error-icon">🔒</div>
-                    <div class="error-message">
-                        <h3>ブラウザによってブロックされました</h3>
-                        <p>ブラウザの設定でSoundCloudからのコンテンツがブロックされている可能性があります。</p>
-                        <p>アドブロッカーを無効にするか、SoundCloudを許可リストに追加してください。</p>
-                        <button onclick="retryLoading()" style="margin-top: 10px;">再試行</button>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // iframe読み込みエラーの表示
-        function showIframeError(container, message) {
-            container.innerHTML = `
-                <div class="error-container">
-                    <div class="error-icon">⚠️</div>
-                    <div class="error-message">
-                        <h3>${message}</h3>
-                        <p>URLが正しいか確認するか、ブラウザの設定をご確認ください。</p>
-                        <button onclick="retryLoading()" style="margin-top: 10px;">再試行</button>
-                    </div>
-                </div>
-            `;
-        }
+        // SoundCloud SDK初期化
+        SC.initialize({
+            client_id: 'YOUR_CLIENT_ID' // ここにClient IDを設定
+        });
 
-        // Widget APIの初期化とイベントハンドリング（改良版）
-        function initializeWidget(iframeElement) {
-            if (!widgetApiLoaded || !window.SC || !window.SC.Widget) {
-                if (!widgetApiLoaded) {
-                    console.log('SoundCloud Widget API not loaded, iframe will work without interactive controls');
-                } else {
-                    console.warn('SoundCloud Widget API not available');
-                }
-                // Widget APIが利用できない場合でも、iframeは表示を続ける
-                // この場合、エラーは表示しない
-                return null;
-            }
-            
-            try {
-                const widget = SC.Widget(iframeElement);
-                
-                // Widget APIの準備完了まで少し待つ
-                setTimeout(() => {
-                    try {
-                        // 再生状態の監視
-                        widget.bind(SC.Widget.Events.READY, function() {
-                            console.log('Player is ready');
-                            showPlayerReady();
-                        });
-                        
-                        widget.bind(SC.Widget.Events.PLAY, function() {
-                            console.log('Playing');
-                            updatePlayButton(true);
-                        });
-                        
-                        widget.bind(SC.Widget.Events.PAUSE, function() {
-                            console.log('Paused');
-                            updatePlayButton(false);
-                        });
-                        
-                        widget.bind(SC.Widget.Events.FINISH, function() {
-                            console.log('Finished');
-                            handlePlaybackComplete();
-                        });
-                        
-                        // エラーハンドリングを改良：すぐにはエラーを表示しない
-                        widget.bind(SC.Widget.Events.ERROR, function(event) {
-                            console.log('Widget Error:', event);
-                            // エラーが発生しても、少し待ってから判断する
-                            setTimeout(() => {
-                                handleWidgetError(event);
-                            }, 2000);
-                        });
-                        
-                        // Widget APIが正常に初期化されたことを確認
-                        widget.getVolume((volume) => {
-                            console.log('Widget API is working, volume:', volume);
-                        });
-                        
-                    } catch (bindError) {
-                        console.warn('Error binding Widget events:', bindError);
-                        // イベントバインドに失敗してもiframeは表示を続ける
-                    }
-                }, 1000); // Widget APIの初期化を待つ
-                
-                return widget;
-            } catch (error) {
-                console.error('Error initializing Widget:', error);
-                // Widget初期化に失敗してもiframeは表示を続ける
-                return null;
-            }
-        }
-        
-        // Widget APIエラーの処理（より慎重に）
-        function handleWidgetError(event) {
-            console.error('Widget API Error after delay:', event);
-            
-            // 現在のiframeが実際に問題があるかチェック
-            const currentIframe = isMinimalMode ? 
-                document.querySelector('#minimalPlayerContainer iframe') :
-                document.querySelector('#playerContainer iframe');
-                
-            if (currentIframe) {
-                // iframeがまだ存在し、srcが設定されている場合、エラーメッセージは表示しない
-                // 代わりに、Widget APIなしでも動作していることを示す
-                console.log('iframe still exists, may work without Widget API');
-                return;
-            }
-            
-            // iframeが存在しない、または明らかに問題がある場合のみエラーを表示
-            handlePlayerError();
-        }
-        
-        // プレイヤー準備完了の通知
-        function showPlayerReady() {
-            // プレイヤー準備完了のフィードバック
-        }
-        
-        // 再生ボタンの状態更新
-        function updatePlayButton(isPlaying) {
-            // 再生状態に応じたUI更新
-        }
-        
-        // 再生完了時の処理
-        function handlePlaybackComplete() {
-            // 再生完了時の処理
-        }
-        
+        // 変数
+        let audio = null;
+        let isPlaying = false;
+        let isDragging = false;
+
         // ページ読み込み時にURLパラメータをチェック
-        window.addEventListener('load', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const soundcloudUrl = urlParams.get('url');
-            
-            if (soundcloudUrl) {
-                // URLパラメータがある場合：ミニマルモードでプレイヤーのみ表示
-                enterMinimalMode(soundcloudUrl);
+        window.addEventListener('load', () => {
+            const url = new URLSearchParams(window.location.search).get('url');
+            if (url) {
+                loadTrack(url);
             } else {
-                // URLパラメータがない場合：通常モードを表示
-                showNormalMode();
+                showError('URLが指定されていません');
             }
         });
-        
-        // ミニマルモードに入る
-        function enterMinimalMode(url) {
-            isMinimalMode = true;
-            document.querySelector('.container').style.display = 'none';
-            document.querySelector('.minimal-player').style.display = 'flex';
-            
-            // URLをクリーンアップ
-            const cleanUrl = url.replace('m.soundcloud.com', 'soundcloud.com');
-            
-            // 公式パラメータのみでURL生成
-            const iframeUrl = buildSoundCloudIframeUrl(cleanUrl);
-            
-            // iframeを生成
-            const iframe = document.createElement('iframe');
-            iframe.src = iframeUrl;
-            iframe.loading = 'eager';
-            iframe.style.cssText = 'width: 100%; height: 166px; border: none; box-shadow: none; max-width: 600px; margin: 0 auto;';
-            
-            const container = document.getElementById('minimalPlayerContainer');
-            container.innerHTML = '';
-            container.appendChild(iframe);
-            
-            // iframe読み込み状態の監視を開始
-            monitorIframeLoading(iframe, container);
-            
-            // タイトルを楽曲名に変更
-            document.title = 'SoundCloud Player - ' + extractTrackName(cleanUrl);
-        }
-        
-        // 通常モードを表示
-        function showNormalMode() {
-            isMinimalMode = false;
-            document.querySelector('.container').style.display = 'block';
-            document.querySelector('.minimal-player').style.display = 'none';
-            document.title = 'SoundCloud Player';
-        }
-        
-        // SoundCloudプレイヤーをロードする関数
-        async function loadPlayer() {
-            const button = document.getElementById('loadButton');
-            const originalText = button.textContent;
-            
-            // ローディング表示
-            button.innerHTML = '<div class="loading"></div>';
-            button.disabled = true;
-            
-            const url = document.getElementById('soundcloudUrl').value.trim();
-            const container = document.getElementById('playerContainer');
-            
-            if (!url) {
-                showError('SoundCloud URLを入力してください');
-                resetButton(button, originalText);
-                return;
-            }
-            
-            // URLのバリデーション
-            if (!url.includes('soundcloud.com')) {
-                showError('有効なSoundCloud URLを入力してください');
-                resetButton(button, originalText);
-                return;
-            }
-            
+
+        // トラック読み込み
+        async function loadTrack(url) {
             try {
-                // URLをクリーンアップ
-                const cleanUrl = url.replace('m.soundcloud.com', 'soundcloud.com');
+                document.getElementById('artwork').innerHTML = '<div class="loading">⏳</div>';
+                hideError();
+
+                // トラック情報取得
+                const track = await SC.resolve(url);
                 
-                // 公式パラメータのみでURL生成
-                const iframeUrl = buildSoundCloudIframeUrl(cleanUrl);
+                // 情報表示
+                document.getElementById('trackTitle').textContent = track.title;
+                document.getElementById('trackArtist').textContent = track.user.username;
                 
-                // iframeを生成
-                const iframe = document.createElement('iframe');
-                iframe.src = iframeUrl;
-                iframe.loading = 'eager';
-                iframe.style.cssText = 'width: 100%; height: 166px; border: none;';
+                // アートワーク設定
+                const artworkUrl = track.artwork_url || track.user.avatar_url;
+                if (artworkUrl) {
+                    const img = new Image();
+                    img.onload = () => {
+                        document.getElementById('artwork').innerHTML = `<img src="${img.src}" alt="Artwork">`;
+                    };
+                    img.onerror = () => {
+                        document.getElementById('artwork').innerHTML = '<div class="artwork-placeholder">🎵</div>';
+                    };
+                    img.src = artworkUrl.replace('-large.', '-t500x500.');
+                } else {
+                    document.getElementById('artwork').innerHTML = '<div class="artwork-placeholder">🎵</div>';
+                }
+
+                // オーディオ準備
+                const stream = await SC.stream(`/tracks/${track.id}`);
                 
-                container.innerHTML = '';
-                container.appendChild(iframe);
-                
-                // iframe読み込み状態の監視を開始
-                monitorIframeLoading(iframe, container);
-                
-                // URLパラメータを更新
-                const newUrl = new URL(window.location);
-                newUrl.searchParams.set('url', cleanUrl);
-                window.history.pushState({}, '', newUrl);
-                
-                resetButton(button, originalText);
-                
+                if (audio) {
+                    audio.pause();
+                    audio.remove();
+                }
+
+                audio = new Audio();
+                audio.src = stream.options.streamUrl;
+                audio.preload = 'metadata';
+
+                // イベント設定
+                audio.addEventListener('loadedmetadata', () => {
+                    document.getElementById('duration').textContent = formatTime(audio.duration);
+                });
+
+                audio.addEventListener('timeupdate', updateProgress);
+                audio.addEventListener('ended', () => {
+                    isPlaying = false;
+                    updatePlayButton();
+                });
+
+                // プログレスバー操作
+                setupProgressControls();
+
             } catch (error) {
-                console.error('Error loading SoundCloud player:', error);
-                showError('プレイヤーの読み込みに失敗しました');
-                resetButton(button, originalText);
+                console.error('Load error:', error);
+                showError('トラックを読み込めません');
             }
-        }
-        
-        // ボタンをリセット
-        function resetButton(button, text) {
-            button.innerHTML = text;
-            button.disabled = false;
-        }
-        
-        // 楽曲名をURLから抽出
-        function extractTrackName(url) {
-            try {
-                const urlObj = new URL(url);
-                const pathParts = urlObj.pathname.split('/').filter(p => p);
-                return pathParts.length >= 2 ? pathParts[pathParts.length - 1].replace(/-/g, ' ') : 'Unknown Track';
-            } catch {
-                return 'Unknown Track';
-            }
-        }
-        
-        // エラーハンドリングの強化
-        function handlePlayerError() {
-            const container = isMinimalMode ? 
-                document.getElementById('minimalPlayerContainer') : 
-                document.getElementById('playerContainer');
-            
-            container.innerHTML = `
-                <div class="error-container">
-                    <div class="error-icon">⚠️</div>
-                    <div class="error-message">
-                        <h3>再生できません</h3>
-                        <p>ネットワーク接続を確認するか、別のURLをお試しください。</p>
-                        <button onclick="retryLoading()" style="margin-top: 10px;">再試行</button>
-                    </div>
-                </div>
-            `;
         }
 
-        // 再読み込み関数
-        function retryLoading() {
-            const url = document.getElementById('soundcloudUrl')?.value || 
-                        new URLSearchParams(window.location.search).get('url');
-            
-            if (url) {
-                if (isMinimalMode) {
-                    enterMinimalMode(url);
-                } else {
-                    loadPlayer();
-                }
+        // 再生/停止
+        function togglePlay() {
+            if (!audio) return;
+
+            if (isPlaying) {
+                audio.pause();
+                isPlaying = false;
+            } else {
+                audio.play().then(() => {
+                    isPlaying = true;
+                }).catch(error => {
+                    console.error('Play error:', error);
+                    showError('再生できません');
+                });
             }
+            updatePlayButton();
+        }
+
+        // 再生ボタン更新
+        function updatePlayButton() {
+            document.getElementById('playBtn').textContent = isPlaying ? '⏸' : '▶';
+        }
+
+        // プログレス更新
+        function updateProgress() {
+            if (!audio || isDragging) return;
+            
+            const progress = (audio.currentTime / audio.duration) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('currentTime').textContent = formatTime(audio.currentTime);
+        }
+
+        // プログレスバー操作設定
+        function setupProgressControls() {
+            const progressBar = document.getElementById('progressBar');
+
+            const handleStart = (e) => {
+                isDragging = true;
+                updateProgressFromEvent(e);
+            };
+
+            const handleMove = (e) => {
+                if (isDragging) {
+                    updateProgressFromEvent(e);
+                }
+            };
+
+            const handleEnd = () => {
+                isDragging = false;
+            };
+
+            // マウスイベント
+            progressBar.addEventListener('mousedown', handleStart);
+            document.addEventListener('mousemove', handleMove);
+            document.addEventListener('mouseup', handleEnd);
+
+            // タッチイベント
+            progressBar.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleStart(e.touches[0]);
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (isDragging) {
+                    e.preventDefault();
+                    handleMove(e.touches[0]);
+                }
+            });
+
+            document.addEventListener('touchend', handleEnd);
+        }
+
+        // イベントからプログレス更新
+        function updateProgressFromEvent(e) {
+            if (!audio) return;
+            
+            const progressBar = document.getElementById('progressBar');
+            const rect = progressBar.getBoundingClientRect();
+            const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            audio.currentTime = pos * audio.duration;
+            updateProgress();
+        }
+
+        // 時間フォーマット
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
         // エラー表示
         function showError(message) {
-            const container = document.getElementById('playerContainer');
-            container.innerHTML = `<div class="error">❌ ${message}</div>`;
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('error').style.display = 'block';
         }
-        
-        // Enterキーで読み込み実行
-        document.getElementById('soundcloudUrl').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                loadPlayer();
+
+        // エラー非表示
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        // 再試行
+        function retry() {
+            const url = new URLSearchParams(window.location.search).get('url');
+            if (url) {
+                loadTrack(url);
             }
-        });
-        
-        // モバイルでのタッチイベント最適化
-        function optimizeTouchEvents() {
-            // ダブルタップズームの防止
-            document.addEventListener('touchstart', function(e) {
+        }
+
+        // タッチ操作最適化
+        if ('ontouchstart' in window) {
+            document.addEventListener('touchstart', (e) => {
                 if (e.touches.length > 1) {
                     e.preventDefault();
                 }
             }, { passive: false });
         }
-        
-        // 画面回転対応
-        function handleOrientationChange() {
-            const iframe = document.querySelector('.minimal-player iframe');
-            if (iframe) {
-                if (window.matchMedia('(orientation: landscape)').matches) {
-                    // 横画面時の最適化
-                    iframe.style.height = '120px';
-                } else {
-                    // 縦画面時の最適化
-                    iframe.style.height = '180px';
-                }
-            }
-        }
-        
-        // モバイルでのタッチイベント最適化
-        if ('ontouchstart' in window) {
-            optimizeTouchEvents();
-            window.addEventListener('orientationchange', handleOrientationChange);
-            window.addEventListener('resize', handleOrientationChange);
-        }
-        
-        // PWA対応の強化
-        let deferredPrompt;
-        
-        function registerPWA() {
-            // Service Workerの登録
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js').then(registration => {
-                    console.log('ServiceWorker registration successful');
-                }).catch(error => {
-                    console.log('ServiceWorker registration failed:', error);
-                });
-            }
-            
-            // ホーム画面追加の促進
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                showInstallButton();
-            });
-            
-            // インストール完了後の処理
-            window.addEventListener('appinstalled', () => {
-                console.log('PWA was installed');
-                hideInstallButton();
-            });
-        }
-        
-        // インストールボタンの表示
-        function showInstallButton() {
-            if (!document.getElementById('installButton')) {
-                const installButton = document.createElement('button');
-                installButton.id = 'installButton';
-                installButton.textContent = '📱 ホーム画面に追加';
-                installButton.className = 'install-button';
-                installButton.onclick = installApp;
-                
-                // ボタンをヘッダーに追加
-                const header = document.querySelector('.header');
-                if (header) {
-                    header.appendChild(installButton);
-                }
-            }
-        }
-        
-        // インストールボタンの非表示
-        function hideInstallButton() {
-            const installButton = document.getElementById('installButton');
-            if (installButton) {
-                installButton.remove();
-            }
-        }
-        
-        // アプリのインストール
-        function installApp() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the install prompt');
-                    }
-                    deferredPrompt = null;
-                    hideInstallButton();
-                });
-            }
-        }
-        
-        // PWA初期化
-        registerPWA();
     </script>
 </body>
 </html>
