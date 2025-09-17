@@ -288,42 +288,132 @@
             return baseUrl + '?' + params.toString();
         }
         
+        // iframe読み込み状態の監視（簡略化版）
+        function monitorIframeLoading(iframe, container, timeoutMs = 5000) {
+            let hasLoaded = false;
+            
+            // iframe読み込み完了時
+            iframe.onload = function() {
+                if (!hasLoaded) {
+                    hasLoaded = true;
+                    console.log('iframe loaded successfully');
+                    
+                    // SoundCloud Widget APIの初期化を試行
+                    setTimeout(() => {
+                        currentWidget = initializeWidget(iframe);
+                        
+                        // さらに2秒後に、コンテンツがブロックされているかチェック
+                        setTimeout(() => {
+                            checkIframeContent(iframe, container);
+                        }, 2000);
+                    }, 500);
+                }
+            };
+            
+            // iframe読み込み失敗時
+            iframe.onerror = function() {
+                if (!hasLoaded) {
+                    hasLoaded = true;
+                    console.error('iframe failed to load');
+                    showIframeError(container, '読み込みに失敗しました');
+                }
+            };
+            
+            // タイムアウトチェック
+            setTimeout(() => {
+                if (!hasLoaded) {
+                    console.warn('iframe loading timeout');
+                    showIframeError(container, '読み込みがタイムアウトしました');
+                }
+            }, timeoutMs);
+        }
+        
+        // iframe内容のチェック（ブロックされていないか確認）
+        function checkIframeContent(iframe, container) {
+            try {
+                // iframeの内容にアクセスを試行
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (iframeDoc) {
+                    const bodyText = iframeDoc.body ? iframeDoc.body.textContent : '';
+                    if (bodyText.includes('blocked') || bodyText.includes('Blocked')) {
+                        console.warn('iframe content appears to be blocked');
+                        showIframeError(container, 'コンテンツがブロックされました');
+                        return;
+                    }
+                }
+            } catch (e) {
+                // クロスオリジンエラーは正常（SoundCloudは外部ドメイン）
+                if (e.name === 'SecurityError') {
+                    console.log('Cross-origin iframe (normal for SoundCloud)');
+                } else {
+                    console.warn('Could not check iframe content:', e);
+                }
+            }
+            
+            // Widget APIが利用できない場合の追加チェック
+            if (!window.SC || !window.SC.Widget) {
+                console.warn('SoundCloud Widget API is not available, but iframe may still work');
+                // Widget APIがなくてもiframeは表示し続ける
+            }
+        }
+        
+        // iframe読み込みエラーの表示
+        function showIframeError(container, message) {
+            container.innerHTML = `
+                <div class="error-container">
+                    <div class="error-icon">⚠️</div>
+                    <div class="error-message">
+                        <h3>${message}</h3>
+                        <p>URLが正しいか確認するか、ブラウザの設定をご確認ください。</p>
+                        <button onclick="retryLoading()" style="margin-top: 10px;">再試行</button>
+                    </div>
+                </div>
+            `;
+        }
+
         // Widget APIの初期化とイベントハンドリング
         function initializeWidget(iframeElement) {
             if (!window.SC || !window.SC.Widget) {
                 console.warn('SoundCloud Widget API not available');
+                // Widget APIが利用できない場合でも、iframeは表示を続ける
                 return null;
             }
             
-            const widget = SC.Widget(iframeElement);
-            
-            // 再生状態の監視
-            widget.bind(SC.Widget.Events.READY, function() {
-                console.log('Player is ready');
-                showPlayerReady();
-            });
-            
-            widget.bind(SC.Widget.Events.PLAY, function() {
-                console.log('Playing');
-                updatePlayButton(true);
-            });
-            
-            widget.bind(SC.Widget.Events.PAUSE, function() {
-                console.log('Paused');
-                updatePlayButton(false);
-            });
-            
-            widget.bind(SC.Widget.Events.FINISH, function() {
-                console.log('Finished');
-                handlePlaybackComplete();
-            });
-            
-            widget.bind(SC.Widget.Events.ERROR, function() {
-                console.log('Error');
-                handlePlayerError();
-            });
-            
-            return widget;
+            try {
+                const widget = SC.Widget(iframeElement);
+                
+                // 再生状態の監視
+                widget.bind(SC.Widget.Events.READY, function() {
+                    console.log('Player is ready');
+                    showPlayerReady();
+                });
+                
+                widget.bind(SC.Widget.Events.PLAY, function() {
+                    console.log('Playing');
+                    updatePlayButton(true);
+                });
+                
+                widget.bind(SC.Widget.Events.PAUSE, function() {
+                    console.log('Paused');
+                    updatePlayButton(false);
+                });
+                
+                widget.bind(SC.Widget.Events.FINISH, function() {
+                    console.log('Finished');
+                    handlePlaybackComplete();
+                });
+                
+                widget.bind(SC.Widget.Events.ERROR, function(event) {
+                    console.log('Widget Error:', event);
+                    handlePlayerError();
+                });
+                
+                return widget;
+            } catch (error) {
+                console.error('Error initializing Widget:', error);
+                // Widget初期化に失敗してもiframeは表示を続ける
+                return null;
+            }
         }
         
         // プレイヤー準備完了の通知
@@ -377,10 +467,8 @@
             container.innerHTML = '';
             container.appendChild(iframe);
             
-            // Widget APIの初期化
-            iframe.onload = function() {
-                currentWidget = initializeWidget(iframe);
-            };
+            // iframe読み込み状態の監視を開始
+            monitorIframeLoading(iframe, container);
             
             // タイトルを楽曲名に変更
             document.title = 'SoundCloud Player - ' + extractTrackName(cleanUrl);
@@ -435,10 +523,8 @@
                 container.innerHTML = '';
                 container.appendChild(iframe);
                 
-                // Widget APIの初期化
-                iframe.onload = function() {
-                    currentWidget = initializeWidget(iframe);
-                };
+                // iframe読み込み状態の監視を開始
+                monitorIframeLoading(iframe, container);
                 
                 // URLパラメータを更新
                 const newUrl = new URL(window.location);
