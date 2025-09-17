@@ -131,6 +131,11 @@
             transform: scale(0.95);
         }
 
+        .play-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
         /* ローディング */
         .loading {
             font-size: 40px;
@@ -232,7 +237,7 @@
 
             <!-- コントロール -->
             <div class="controls">
-                <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+                <button class="play-btn" id="playBtn" onclick="togglePlay()" disabled>▶</button>
             </div>
 
             <!-- エラー -->
@@ -242,20 +247,17 @@
             </div>
         </div>
     </div>
-
-    <!-- SoundCloud SDK -->
-    <script src="https://connect.soundcloud.com/sdk/sdk-3.3.2.js"></script>
     
     <script>
-        // SoundCloud SDK初期化
-        SC.initialize({
-            client_id: 'YOUR_CLIENT_ID' // ここにClient IDを設定
-        });
-
+        // Client ID（実際の使用時は適切な方法で管理してください）
+        const CLIENT_ID = 'YOUR_CLIENT_ID';
+        
         // 変数
         let audio = null;
         let isPlaying = false;
         let isDragging = false;
+        let trackData = null;
+        let hasUserInteracted = false;
 
         // ページ読み込み時にURLパラメータをチェック
         window.addEventListener('load', () => {
@@ -265,6 +267,15 @@
             } else {
                 showError('URLが指定されていません');
             }
+            
+            // ユーザー操作を検出
+            document.addEventListener('click', () => {
+                hasUserInteracted = true;
+            }, { once: true });
+            
+            document.addEventListener('touchstart', () => {
+                hasUserInteracted = true;
+            }, { once: true });
         });
 
         // トラック読み込み
@@ -272,16 +283,24 @@
             try {
                 document.getElementById('artwork').innerHTML = '<div class="loading">⏳</div>';
                 hideError();
+                document.getElementById('playBtn').disabled = true;
 
-                // トラック情報取得
-                const track = await SC.resolve(url);
+                // 1. URLを解決してトラックIDを取得
+                const resolveUrl = `https://api-v2.soundcloud.com/resolve?url=${encodeURIComponent(url)}&client_id=${CLIENT_ID}`;
+                const resolveResponse = await fetch(resolveUrl);
+                
+                if (!resolveResponse.ok) {
+                    throw new Error(`Failed to resolve URL: ${resolveResponse.status}`);
+                }
+                
+                trackData = await resolveResponse.json();
                 
                 // 情報表示
-                document.getElementById('trackTitle').textContent = track.title;
-                document.getElementById('trackArtist').textContent = track.user.username;
+                document.getElementById('trackTitle').textContent = trackData.title;
+                document.getElementById('trackArtist').textContent = trackData.user.username;
                 
                 // アートワーク設定
-                const artworkUrl = track.artwork_url || track.user.avatar_url;
+                const artworkUrl = trackData.artwork_url || trackData.user.avatar_url;
                 if (artworkUrl) {
                     const img = new Image();
                     img.onload = () => {
@@ -295,21 +314,68 @@
                     document.getElementById('artwork').innerHTML = '<div class="artwork-placeholder">🎵</div>';
                 }
 
-                // オーディオ準備
-                const stream = await SC.stream(`/tracks/${track.id}`);
+                // 2. ストリーミングURLを取得
+                await getStreamUrl(trackData.id);
+
+            } catch (error) {
+                console.error('Load error:', error);
+                showError('トラックを読み込めません');
+            }
+        }
+
+        // ストリーミングURLを取得
+        async function getStreamUrl(trackId) {
+            try {
+                // トラックのメディア情報を取得
+                const mediaUrl = `https://api-v2.soundcloud.com/tracks/${trackId}?client_id=${CLIENT_ID}`;
+                const mediaResponse = await fetch(mediaUrl);
                 
+                if (!mediaResponse.ok) {
+                    throw new Error(`Failed to get media info: ${mediaResponse.status}`);
+                }
+                
+                const mediaData = await mediaResponse.json();
+                
+                // progressive形式のtranscodingを探す
+                let progressiveUrl = null;
+                if (mediaData.media && mediaData.media.transcodings) {
+                    for (const transcoding of mediaData.media.transcodings) {
+                        if (transcoding.format.protocol === 'progressive') {
+                            progressiveUrl = transcoding.url;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!progressiveUrl) {
+                    throw new Error('No progressive stream URL found');
+                }
+                
+                // 実際のストリーミングURLを取得
+                const streamUrl = `${progressiveUrl}?client_id=${CLIENT_ID}`;
+                const streamResponse = await fetch(streamUrl);
+                
+                if (!streamResponse.ok) {
+                    throw new Error(`Failed to get stream URL: ${streamResponse.status}`);
+                }
+                
+                const streamData = await streamResponse.json();
+                
+                // オーディオ要素を作成
                 if (audio) {
                     audio.pause();
                     audio.remove();
                 }
 
                 audio = new Audio();
-                audio.src = stream.options.streamUrl;
+                audio.src = streamData.url;
+                audio.crossOrigin = 'anonymous';
                 audio.preload = 'metadata';
 
                 // イベント設定
                 audio.addEventListener('loadedmetadata', () => {
                     document.getElementById('duration').textContent = formatTime(audio.duration);
+                    document.getElementById('playBtn').disabled = false;
                 });
 
                 audio.addEventListener('timeupdate', updateProgress);
@@ -318,12 +384,17 @@
                     updatePlayButton();
                 });
 
+                audio.addEventListener('error', (e) => {
+                    console.error('Audio error:', e);
+                    showError('再生エラーが発生しました');
+                });
+
                 // プログレスバー操作
                 setupProgressControls();
 
             } catch (error) {
-                console.error('Load error:', error);
-                showError('トラックを読み込めません');
+                console.error('Stream error:', error);
+                showError('ストリームを取得できません');
             }
         }
 
@@ -335,12 +406,22 @@
                 audio.pause();
                 isPlaying = false;
             } else {
-                audio.play().then(() => {
-                    isPlaying = true;
-                }).catch(error => {
-                    console.error('Play error:', error);
-                    showError('再生できません');
-                });
+                // ユーザー操作を確認
+                if (!hasUserInteracted) {
+                    // ユーザー操作がない場合は、一度クリックを要求
+                    showError('タップして再生を開始');
+                    return;
+                }
+                
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        isPlaying = true;
+                    }).catch(error => {
+                        console.error('Play error:', error);
+                        showError('再生できません。もう一度タップしてください。');
+                    });
+                }
             }
             updatePlayButton();
         }
