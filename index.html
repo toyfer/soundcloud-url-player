@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ff7700">
+    <link rel="manifest" href="manifest.json">
     <title>SoundCloud Player</title>
     <style>
         /* 共通スタイル */
@@ -111,6 +113,23 @@
         .error-message p {
             margin: 0 0 15px 0;
             color: rgba(255, 255, 255, 0.8);
+        }
+        
+        /* PWA インストールボタン */
+        .install-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .install-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
         }
         
         .info {
@@ -528,12 +547,74 @@
             window.addEventListener('resize', handleOrientationChange);
         }
         
-        // PWA対応
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                // Service Workerの登録（必要に応じて）
+        // PWA対応の強化
+        let deferredPrompt;
+        
+        function registerPWA() {
+            // Service Workerの登録
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful');
+                }).catch(error => {
+                    console.log('ServiceWorker registration failed:', error);
+                });
+            }
+            
+            // ホーム画面追加の促進
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                showInstallButton();
+            });
+            
+            // インストール完了後の処理
+            window.addEventListener('appinstalled', () => {
+                console.log('PWA was installed');
+                hideInstallButton();
             });
         }
+        
+        // インストールボタンの表示
+        function showInstallButton() {
+            if (!document.getElementById('installButton')) {
+                const installButton = document.createElement('button');
+                installButton.id = 'installButton';
+                installButton.textContent = '📱 ホーム画面に追加';
+                installButton.className = 'install-button';
+                installButton.onclick = installApp;
+                
+                // ボタンをヘッダーに追加
+                const header = document.querySelector('.header');
+                if (header) {
+                    header.appendChild(installButton);
+                }
+            }
+        }
+        
+        // インストールボタンの非表示
+        function hideInstallButton() {
+            const installButton = document.getElementById('installButton');
+            if (installButton) {
+                installButton.remove();
+            }
+        }
+        
+        // アプリのインストール
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                    hideInstallButton();
+                });
+            }
+        }
+        
+        // PWA初期化
+        registerPWA();
     </script>
 </body>
 </html>
